@@ -1,14 +1,17 @@
 package Webscrap::Amazon;
 
-use warnings;
 use strict;
-use Carp;
+use warnings;
 use utf8;
 use Encode;
 use Web::Scraper;
 use URI;
+use LWP::Simple;
+use Cache::FileCache;
+use Data::Dumper;
+use YAML;
 
-use version; our $VERSION = qv('0.0.1');
+use version; our $VERSION = '0.0.2';
 
 sub new {
   my $class = shift;
@@ -21,16 +24,48 @@ sub new {
 sub gettitles {
   my $self = shift;
 
-  my $scraper = scraper {
+  my $cache = $self->set_cachedt();
+  my $data = $cache->get($self->{uri});
+
+  my $ret_ref;
+  if (defined($data)) {
+    $ret_ref = $self->get_scrape($data);
+
+  } else {
+    my $content = get($self->{uri});
+    $cache->set($self->{uri}, $content);
+    $cache->Purge();
+
+    $ret_ref = $self->get_scrape($content);
+  }
+  return $ret_ref;
+}
+
+sub set_cachedt {
+  my $ret = Cache::FileCache->new({
+    cache_root => '/tmp',
+    namespace => 'amazon',
+    default_expires_in  => '1h',
+  });
+}
+
+sub set_scrapdt {
+  my $ret = scraper {
     process 'div.zg_itemInfo div.zg_title', 'btitles[]' => 'TEXT';
   };
-  my $uri = URI->new($self->{uri});
-  my $res = $scraper->scrape($uri);
+}
+
+sub get_scrape {
+  my $self = shift;
+  my ($dt) = @_;
   my @ret;
+
+  my $scraper = $self->set_scrapdt();
+  my $res = $scraper->scrape($dt);
   for (@{ $res->{btitles} }){
     push(@ret, encode_utf8($_));
   }
-  return @ret;
+  return \@ret;
 }
 
 1;
@@ -65,6 +100,12 @@ This document describes Webscrap::Amazon version 0.0.1
 =head2 new
 
 =head2 gettitles
+
+=head2 set_cachedt
+
+=head2 set_scrapdt
+
+=head2 get_scrape
 
 =head1 INTERFACE 
 

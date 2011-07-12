@@ -1,5 +1,7 @@
 Revision history for Webscrap-Amazon
 
+0.0.2  Tue Jul 12 12:33:43 2011
+       use Cache::FileCache
 0.0.1  Sat Jul  9 01:21:13 2011
        Initial release.
 
